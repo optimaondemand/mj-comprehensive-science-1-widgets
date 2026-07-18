@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physical or Chemical Change: Rapid Sort</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fb;
+    color: #17223b;
+    padding: 18px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 10px; }
+  .head h1 { font-size: 21px; color: #142347; margin: 0 0 4px; }
+  .head p { font-size: 13px; color: #55617e; margin: 0; }
+  .progress { text-align: center; font-size: 13px; color: #33405e; margin-bottom: 10px; }
+  .progress strong { color: #142347; }
+  .card {
+    background: #fff; border: 1px solid #dde3ee; border-radius: 12px;
+    padding: 24px 22px; margin-bottom: 14px; text-align: center; min-height: 90px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card .scenario { font-size: 18px; font-weight: 600; color: #142347; line-height: 1.4; }
+  .btn-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .btn-row button {
+    flex: 1; padding: 14px 10px; font-size: 15px; font-weight: 700; border-radius: 9px;
+    border: 2px solid transparent; cursor: pointer; color: #fff;
+  }
+  #physicalBtn { background: #1E4D8C; }
+  #physicalBtn:hover { background: #2A5FA3; }
+  #chemicalBtn { background: #A8571E; }
+  #chemicalBtn:hover { background: #BC642A; }
+  .btn-row button:disabled { opacity: .45; cursor: default; }
+  .feedback {
+    border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 14px; min-height: 20px; line-height: 1.5;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #DFF3E9; color: #1A6B3D; border-left: 4px solid #2A9D5C; }
+  .feedback.incorrect { background: #FDECEC; color: #8A1F16; border-left: 4px solid #C0392B; }
+  .next-row { text-align: center; margin-bottom: 10px; }
+  button#nextBtn {
+    background: #142347; color: #fff; border: none; border-radius: 7px;
+    padding: 9px 26px; font-size: 14px; font-weight: 600; cursor: pointer; display: none;
+  }
+  button#nextBtn.show { display: inline-block; }
+  button#nextBtn:hover { background: #223564; }
+  .done-banner {
+    text-align: center; font-size: 14px; font-weight: 700; color: #1A6B3D;
+    background: #DFF3E9; border-radius: 8px; padding: 10px; margin-bottom: 12px; display: none;
+  }
+  .reset-row { text-align: center; }
+  button#resetBtn {
+    background: #55617e; color: #fff; border: none; border-radius: 7px;
+    padding: 8px 22px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  button#resetBtn:hover { background: #6b7996; }
+  button:focus-visible { outline: 3px solid #55C8E8; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap optima-widget">
+  <div class="head">
+    <h1>Physical or Chemical Change: Rapid Sort</h1>
+    <p>Read the scenario. Decide fast: physical change, or chemical change?</p>
+  </div>
+  <div class="progress">Scenario <strong id="progNum">1</strong> of <span id="progTotal">6</span> &middot; Correct so far: <strong id="scoreVal">0</strong></div>
+
+  <div class="card"><div class="scenario" id="scenarioText"></div></div>
+
+  <div class="btn-row">
+    <button id="physicalBtn" type="button">Physical Change</button>
+    <button id="chemicalBtn" type="button">Chemical Change</button>
+  </div>
+
+  <div class="feedback" id="feedback" role="status"></div>
+
+  <div class="next-row"><button id="nextBtn" type="button">Next Scenario</button></div>
+
+  <div class="done-banner" id="doneBanner"></div>
+
+  <div class="reset-row">
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SCENARIOS = [
+    { text: 'You crush an empty aluminum can flat with your foot.', cat: 'physical',
+      evidence: 'It is still aluminum, just bent into a new shape. No new substance formed, so this is a physical change.' },
+    { text: 'An iron nail left outside in the rain slowly grows a reddish-brown coating.', cat: 'chemical',
+      evidence: 'The iron has reacted with oxygen and water to form a new substance, iron oxide (rust), so this is a chemical change.' },
+    { text: 'You stir a spoonful of sugar into a glass of warm water until it disappears.', cat: 'physical',
+      evidence: 'The sugar is still sugar; it has just spread out evenly through the water. No new substance formed, so this is a physical change.' },
+    { text: 'A log in a campfire turns into ash, smoke, and glowing embers.', cat: 'chemical',
+      evidence: 'The wood has combined with oxygen to form new substances (ash, carbon dioxide, water vapor) that are not wood anymore, so this is a chemical change.' },
+    { text: 'You pour juice into an ice cube tray and leave it in the freezer overnight.', cat: 'physical',
+      evidence: 'It is still juice, just in solid form instead of liquid. No new substance formed, so this is a physical change.' },
+    { text: 'You mix batter and bake it in the oven, and it comes out as a cake.', cat: 'chemical',
+      evidence: 'Heat causes the batter\'s ingredients to react and rearrange into new substances with a new texture and structure that cannot turn back into batter, so this is a chemical change.' },
+  ];
+
+  const scenarioText = document.getElementById('scenarioText');
+  const progNum = document.getElementById('progNum');
+  const progTotal = document.getElementById('progTotal');
+  const scoreVal = document.getElementById('scoreVal');
+  const physicalBtn = document.getElementById('physicalBtn');
+  const chemicalBtn = document.getElementById('chemicalBtn');
+  const feedback = document.getElementById('feedback');
+  const nextBtn = document.getElementById('nextBtn');
+  const doneBanner = document.getElementById('doneBanner');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let order = [];
+  let idx = 0;
+  let score = 0;
+  let answered = false;
+
+  function shuffledOrder() {
+    const arr = SCENARIOS.map((e, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function showCurrent() {
+    answered = false;
+    const s = SCENARIOS[order[idx]];
+    scenarioText.textContent = s.text;
+    progNum.textContent = idx + 1;
+    progTotal.textContent = SCENARIOS.length;
+    feedback.className = 'feedback';
+    feedback.textContent = '';
+    nextBtn.classList.remove('show');
+    physicalBtn.disabled = false;
+    chemicalBtn.disabled = false;
+    doneBanner.style.display = 'none';
+  }
+
+  function answer(catChosen) {
+    if (answered) return;
+    answered = true;
+    physicalBtn.disabled = true;
+    chemicalBtn.disabled = true;
+    const s = SCENARIOS[order[idx]];
+    const correct = catChosen === s.cat;
+    if (correct) score++;
+    scoreVal.textContent = score;
+    feedback.className = 'feedback show ' + (correct ? 'correct' : 'incorrect');
+    feedback.textContent = (correct ? 'Correct. ' : 'Not quite. ') + s.evidence;
+    if (idx < SCENARIOS.length - 1) {
+      nextBtn.classList.add('show');
+    } else {
+      doneBanner.style.display = 'block';
+      doneBanner.textContent = 'Done! You got ' + score + ' out of ' + SCENARIOS.length + ' correct.';
+    }
+  }
+
+  physicalBtn.addEventListener('click', () => answer('physical'));
+  chemicalBtn.addEventListener('click', () => answer('chemical'));
+  nextBtn.addEventListener('click', () => { idx++; showCurrent(); });
+
+  resetBtn.addEventListener('click', () => {
+    order = shuffledOrder();
+    idx = 0;
+    score = 0;
+    scoreVal.textContent = 0;
+    showCurrent();
+  });
+
+  order = shuffledOrder();
+  showCurrent();
+})();
+</script>
+</body>
+</html>

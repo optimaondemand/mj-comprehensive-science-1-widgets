@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon Cycle Diagram Explorer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fb;
+    color: #17223b;
+    padding: 18px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 8px; }
+  .head h1 { font-size: 20px; color: #142347; margin: 0 0 4px; }
+  .head p { font-size: 13px; color: #55617e; margin: 0; }
+  .matter-note {
+    background: #EAF2FB; border: 1px solid #BFD6EE; border-left: 4px solid #2E6DA4;
+    border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #1B3A5C; margin-bottom: 12px;
+  }
+  .diagram-shell {
+    background: #fff; border: 1px solid #dde3ee; border-radius: 12px; padding: 14px; margin-bottom: 12px;
+  }
+  .diagram-area { position: relative; width: 100%; padding-bottom: 100%; }
+  .diagram-area svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .diagram-area svg line {
+    stroke: #c7d1e2; stroke-width: 1.6; marker-end: url(#arrowhead);
+    transition: stroke .3s ease, stroke-width .3s ease;
+  }
+  .diagram-area svg line.active { stroke: #C7922C; stroke-width: 2.8; }
+  .node {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 84px; height: 84px; border-radius: 50%;
+    background: #142347; color: #fff; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 11px; font-weight: 700; padding: 4px; cursor: pointer;
+    border: 3px solid transparent; transition: transform .2s ease, border-color .3s ease, background .3s ease;
+  }
+  .node:hover { transform: translate(-50%, -50%) scale(1.05); }
+  .node.selected { border-color: #55C8E8; }
+  .node.active { background: #C7922C; }
+  .node:focus-visible { outline: 3px solid #55C8E8; outline-offset: 3px; }
+  .info-panel {
+    background: #fff; border: 1px solid #dde3ee; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+    min-height: 66px; font-size: 13.5px; line-height: 1.5;
+  }
+  .info-panel .title { font-weight: 700; color: #142347; margin-bottom: 4px; font-size: 14px; }
+  .controls-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 6px; }
+  button#playBtn, button#resetBtn {
+    border: none; border-radius: 7px; padding: 9px 22px; font-size: 14px; font-weight: 600; cursor: pointer; color: #fff;
+  }
+  button#playBtn { background: #1B9C85; }
+  button#playBtn:hover { background: #22B698; }
+  button#playBtn:disabled { opacity: .55; cursor: default; }
+  button#resetBtn { background: #142347; }
+  button#resetBtn:hover { background: #223564; }
+  button:focus-visible { outline: 3px solid #55C8E8; outline-offset: 2px; }
+  .reset-row { text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap optima-widget">
+  <div class="head">
+    <h1>Carbon Cycle Diagram Explorer</h1>
+    <p>Click a stop on the loop to see how carbon moves through it. Press Play to watch one full loop.</p>
+  </div>
+
+  <div class="matter-note">This diagram shows <strong>carbon (matter)</strong> moving through the system only. Energy does not cycle the same way; it flows through in one direction and is not shown here.</div>
+
+  <div class="diagram-shell">
+    <div class="diagram-area" id="diagramArea">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrowhead" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+            <polygon points="0 0, 7 3.5, 0 7" fill="#c7d1e2" />
+          </marker>
+        </defs>
+        <line id="edge-0" x1="50" y1="12" x2="86" y2="38"></line>
+        <line id="edge-1" x1="86" y1="38" x2="72" y2="81"></line>
+        <line id="edge-2" x1="72" y1="81" x2="28" y2="81"></line>
+        <line id="edge-3" x1="28" y1="81" x2="14" y2="38"></line>
+        <line id="edge-4" x1="14" y1="38" x2="50" y2="12"></line>
+      </svg>
+      <div class="node" id="node-atmosphere" style="left:50%; top:12%;" tabindex="0" role="button" aria-label="Atmosphere">Atmosphere</div>
+      <div class="node" id="node-plants" style="left:86%; top:38%;" tabindex="0" role="button" aria-label="Plants">Plants</div>
+      <div class="node" id="node-animals" style="left:72%; top:81%;" tabindex="0" role="button" aria-label="Animals">Animals</div>
+      <div class="node" id="node-soil" style="left:28%; top:81%;" tabindex="0" role="button" aria-label="Soil and Decomposers">Soil &amp;<br>Decomposers</div>
+      <div class="node" id="node-fossil" style="left:14%; top:38%;" tabindex="0" role="button" aria-label="Fossil Fuels">Fossil<br>Fuels</div>
+    </div>
+  </div>
+
+  <div class="info-panel" id="infoPanel">
+    <div class="title">Click any stop on the loop.</div>
+    <div>Each stop moves carbon in and out in a different way. Start anywhere; the story connects all the way around.</div>
+  </div>
+
+  <div class="controls-row">
+    <button id="playBtn" type="button">Play One Loop</button>
+  </div>
+  <div class="reset-row">
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const NODE_INFO = {
+    atmosphere: {
+      title: 'Atmosphere',
+      text: 'Carbon dioxide gas here gets pulled out by plants during photosynthesis. Carbon dioxide arrives here from respiration (plants and animals), decomposition (soil), and combustion (fossil fuels).',
+    },
+    plants: {
+      title: 'Plants',
+      text: 'Plants pull carbon dioxide from the atmosphere during photosynthesis and lock the carbon into glucose. Some carbon returns to the air right away through the plant\'s own cellular respiration; the rest moves on when an animal eats the plant or the plant dies.',
+    },
+    animals: {
+      title: 'Animals',
+      text: 'Animals take in carbon by eating plants (or other animals). Some of that carbon returns to the atmosphere through the animal\'s own cellular respiration; the rest moves on when the animal dies.',
+    },
+    soil: {
+      title: 'Soil & Decomposers',
+      text: 'When plants and animals die, decomposers break down their bodies. Most of that carbon is released back into the atmosphere through decomposition. Under the right conditions, over a very long time, some buried carbon-rich remains instead become fossil fuels.',
+    },
+    fossil: {
+      title: 'Fossil Fuels',
+      text: 'Fossil fuels (coal, oil, natural gas) hold carbon that has been stored underground for millions of years. Burning them (combustion) releases that ancient carbon back into the atmosphere all at once.',
+    },
+  };
+
+  const LOOP_ORDER = ['atmosphere', 'plants', 'animals', 'soil', 'fossil'];
+  const EDGE_LABELS = [
+    'Photosynthesis moves carbon from the atmosphere into plants.',
+    'Eating moves carbon from plants into animals.',
+    'Death and decomposition move carbon from animals and plants into the soil.',
+    'Over long spans of time, buried carbon can become fossil fuels.',
+    'Combustion (burning fossil fuels) releases carbon back into the atmosphere.',
+  ];
+
+  const infoPanel = document.getElementById('infoPanel');
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const nodeEls = {};
+  LOOP_ORDER.forEach(key => { nodeEls[key] = document.getElementById('node-' + key); });
+  const edgeEls = [0, 1, 2, 3, 4].map(i => document.getElementById('edge-' + i));
+
+  let playing = false;
+  let playTimer = null;
+
+  function clearHighlights() {
+    Object.values(nodeEls).forEach(n => n.classList.remove('active', 'selected'));
+    edgeEls.forEach(e => e.classList.remove('active'));
+  }
+
+  function showNodeInfo(key) {
+    const info = NODE_INFO[key];
+    infoPanel.innerHTML = '<div class="title">' + info.title + '</div><div>' + info.text + '</div>';
+  }
+
+  Object.entries(nodeEls).forEach(([key, el]) => {
+    function activate() {
+      if (playing) return;
+      clearHighlights();
+      el.classList.add('selected');
+      showNodeInfo(key);
+    }
+    el.addEventListener('click', activate);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+    });
+  });
+
+  function playLoop() {
+    if (playing) return;
+    playing = true;
+    playBtn.disabled = true;
+    clearHighlights();
+    let step = 0;
+    const totalSteps = LOOP_ORDER.length; // 5 edges, one full loop back to the start
+
+    function doStep() {
+      clearHighlights();
+      const fromKey = LOOP_ORDER[step];
+      const toKey = LOOP_ORDER[(step + 1) % LOOP_ORDER.length];
+      nodeEls[fromKey].classList.add('active');
+      edgeEls[step].classList.add('active');
+      nodeEls[toKey].classList.add('active');
+      infoPanel.innerHTML = '<div class="title">' + NODE_INFO[fromKey].title + ' &rarr; ' + NODE_INFO[toKey].title + '</div><div>' + EDGE_LABELS[step] + '</div>';
+
+      step++;
+      if (step < totalSteps) {
+        playTimer = setTimeout(doStep, 1400);
+      } else {
+        playTimer = setTimeout(() => {
+          clearHighlights();
+          infoPanel.innerHTML = '<div class="title">Loop complete.</div><div>Carbon moved all the way around: atmosphere, plants, animals, soil and decomposers, fossil fuels, and back to the atmosphere. Remember: this loop is carbon (matter), not energy.</div>';
+          playing = false;
+          playBtn.disabled = false;
+        }, 1400);
+      }
+    }
+    doStep();
+  }
+
+  playBtn.addEventListener('click', playLoop);
+
+  resetBtn.addEventListener('click', () => {
+    if (playTimer) clearTimeout(playTimer);
+    playing = false;
+    playBtn.disabled = false;
+    clearHighlights();
+    infoPanel.innerHTML = '<div class="title">Click any stop on the loop.</div><div>Each stop moves carbon in and out in a different way. Start anywhere; the story connects all the way around.</div>';
+  });
+})();
+</script>
+</body>
+</html>

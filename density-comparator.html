@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Density Comparator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fb;
+    color: #17223b;
+    padding: 18px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 14px; }
+  .head h1 { font-size: 21px; color: #142347; margin: 0 0 4px; }
+  .head p { font-size: 13px; color: #55617e; margin: 0; }
+  .cols { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .block-panel {
+    flex: 1;
+    min-width: 260px;
+    background: #fff;
+    border: 1px solid #dde3ee;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .block-panel h2 { font-size: 14px; margin: 0 0 10px; color: #142347; }
+  .block-panel.a h2 { color: #1E4D8C; }
+  .block-panel.b h2 { color: #A8571E; }
+  .slider-row { margin-bottom: 12px; }
+  .slider-row .top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+  .slider-row .top .name { font-weight: 700; color: #33405e; }
+  .slider-row .top .val { font-weight: 700; }
+  input[type=range] { width: 100%; height: 6px; cursor: pointer; }
+  input[type=range].mass-a { accent-color: #1E4D8C; }
+  input[type=range].vol-a { accent-color: #6FA0D8; }
+  input[type=range].mass-b { accent-color: #A8571E; }
+  input[type=range].vol-b { accent-color: #D89A6F; }
+  .density-readout {
+    background: #eef2f8;
+    border-radius: 7px;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 13px;
+    color: #142347;
+  }
+  .density-readout .num { font-size: 20px; font-weight: 700; }
+  .tank {
+    background: #fff;
+    border: 1px solid #dde3ee;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .tank h3 { font-size: 13px; color: #142347; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .4px; }
+  canvas { display: block; width: 100%; height: 200px; border-radius: 8px; }
+  .verdict-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .verdict {
+    flex: 1;
+    min-width: 200px;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f6f8fb;
+    border-left: 4px solid #999;
+  }
+  .verdict.floats { border-left-color: #1B9C85; }
+  .verdict.sinks { border-left-color: #C0392B; }
+  .verdict.hovers { border-left-color: #C7922C; }
+  .reset-row { text-align: center; }
+  button#resetBtn {
+    background: #142347; color: #fff; border: none; border-radius: 7px;
+    padding: 9px 26px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button#resetBtn:hover { background: #223564; }
+  button#resetBtn:focus-visible, input[type=range]:focus-visible { outline: 3px solid #55C8E8; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap optima-widget">
+  <div class="head">
+    <h1>Density Comparator</h1>
+    <p>Change the mass and volume of each block. Watch density, and whether it floats or sinks in water.</p>
+  </div>
+
+  <div class="cols">
+    <div class="block-panel a">
+      <h2>Block A</h2>
+      <div class="slider-row">
+        <div class="top"><span class="name">Mass</span><span class="val" id="massAVal">120 g</span></div>
+        <input type="range" id="massA" class="mass-a" min="10" max="500" value="120" step="5" aria-label="Block A mass in grams">
+      </div>
+      <div class="slider-row">
+        <div class="top"><span class="name">Volume</span><span class="val" id="volAVal">100 cm&sup3;</span></div>
+        <input type="range" id="volA" class="vol-a" min="10" max="200" value="100" step="5" aria-label="Block A volume in cubic centimeters">
+      </div>
+      <div class="density-readout">Density = mass &divide; volume<br><span class="num" id="densAVal">1.20</span> g/cm&sup3;</div>
+    </div>
+    <div class="block-panel b">
+      <h2>Block B</h2>
+      <div class="slider-row">
+        <div class="top"><span class="name">Mass</span><span class="val" id="massBVal">40 g</span></div>
+        <input type="range" id="massB" class="mass-b" min="10" max="500" value="40" step="5" aria-label="Block B mass in grams">
+      </div>
+      <div class="slider-row">
+        <div class="top"><span class="name">Volume</span><span class="val" id="volBVal">100 cm&sup3;</span></div>
+        <input type="range" id="volB" class="vol-b" min="10" max="200" value="100" step="5" aria-label="Block B volume in cubic centimeters">
+      </div>
+      <div class="density-readout">Density = mass &divide; volume<br><span class="num" id="densBVal">0.40</span> g/cm&sup3;</div>
+    </div>
+  </div>
+
+  <div class="tank">
+    <h3>Water Tank (water = 1.00 g/cm&sup3;)</h3>
+    <canvas id="tankCanvas"></canvas>
+    <div class="verdict-row">
+      <div class="verdict" id="verdictA">Block A: &mdash;</div>
+      <div class="verdict" id="verdictB">Block B: &mdash;</div>
+    </div>
+  </div>
+
+  <div class="reset-row">
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const els = {
+    massA: document.getElementById('massA'), volA: document.getElementById('volA'),
+    massB: document.getElementById('massB'), volB: document.getElementById('volB'),
+    massAVal: document.getElementById('massAVal'), volAVal: document.getElementById('volAVal'),
+    massBVal: document.getElementById('massBVal'), volBVal: document.getElementById('volBVal'),
+    densAVal: document.getElementById('densAVal'), densBVal: document.getElementById('densBVal'),
+    verdictA: document.getElementById('verdictA'), verdictB: document.getElementById('verdictB'),
+    resetBtn: document.getElementById('resetBtn'),
+  };
+  const canvas = document.getElementById('tankCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const DEFAULTS = { massA: 120, volA: 100, massB: 40, volB: 100 };
+
+  let posA = 0.5, posB = 0.5; // 0 = floating at surface, 1 = resting on tank floor
+  let animId = null;
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = 200;
+  }
+
+  function densityOf(mass, vol) { return mass / vol; }
+
+  function verdictText(density) {
+    if (density < 0.97) return { text: 'floats', cls: 'floats' };
+    if (density > 1.03) return { text: 'sinks', cls: 'sinks' };
+    return { text: 'hovers (about the same density as water)', cls: 'hovers' };
+  }
+
+  function update() {
+    const massA = parseFloat(els.massA.value), volA = parseFloat(els.volA.value);
+    const massB = parseFloat(els.massB.value), volB = parseFloat(els.volB.value);
+    els.massAVal.textContent = massA + ' g';
+    els.volAVal.textContent = volA + ' cm³';
+    els.massBVal.textContent = massB + ' g';
+    els.volBVal.textContent = volB + ' cm³';
+
+    const dA = densityOf(massA, volA);
+    const dB = densityOf(massB, volB);
+    els.densAVal.textContent = dA.toFixed(2);
+    els.densBVal.textContent = dB.toFixed(2);
+
+    const vA = verdictText(dA);
+    const vB = verdictText(dB);
+    els.verdictA.textContent = 'Block A (' + dA.toFixed(2) + ' g/cm³): ' + vA.text;
+    els.verdictA.className = 'verdict ' + vA.cls;
+    els.verdictB.textContent = 'Block B (' + dB.toFixed(2) + ' g/cm³): ' + vB.text;
+    els.verdictB.className = 'verdict ' + vB.cls;
+
+    // Target vertical position: denser than water sinks to the floor,
+    // less dense floats at the surface, near-1.0 hovers mid-tank.
+    posA = targetPos(dA);
+    posB = targetPos(dB);
+
+    return { massA, volA, massB, volB, dA, dB };
+  }
+
+  function targetPos(density) {
+    if (density <= 0.85) return 0.08;
+    if (density >= 1.15) return 0.92;
+    // linear interpolation between float and sink anchors
+    return 0.08 + (density - 0.85) / (1.15 - 0.85) * 0.84;
+  }
+
+  let curA = 0.5, curB = 0.5;
+
+  function sizeForVolume(vol) {
+    // px per cm^3, capped so blocks stay legible on screen
+    const side = 26 + Math.sqrt(vol) * 3.2;
+    return Math.min(side, 70);
+  }
+
+  function shadeForDensity(density) {
+    // Higher density = more saturated / darker fill, purely visual "packed-ness" cue
+    const t = Math.max(0, Math.min(1, (density - 0.2) / 2.0));
+    const light = 78 - t * 45;
+    return 'hsl(213, 55%, ' + light + '%)';
+  }
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const waterTop = H * 0.28;
+    ctx.fillStyle = '#BEE3F8';
+    ctx.fillRect(0, waterTop, W, H - waterTop);
+    ctx.strokeStyle = '#6FA0D8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, waterTop);
+    ctx.lineTo(W, waterTop);
+    ctx.stroke();
+
+    ctx.fillStyle = '#eef2f8';
+    ctx.fillRect(0, 0, W, waterTop);
+
+    curA += (posA - curA) * 0.12;
+    curB += (posB - curB) * 0.12;
+
+    const massA = parseFloat(els.massA.value), volA = parseFloat(els.volA.value);
+    const massB = parseFloat(els.massB.value), volB = parseFloat(els.volB.value);
+    const dA = densityOf(massA, volA), dB = densityOf(massB, volB);
+
+    const sizeA = sizeForVolume(volA);
+    const sizeB = sizeForVolume(volB);
+
+    const usableTop = waterTop + 6;
+    const usableBottom = H - 10;
+    const rangeH = usableBottom - usableTop;
+
+    const yA = usableTop + curA * (rangeH - sizeA);
+    const yB = usableTop + curB * (rangeH - sizeB);
+    const xA = W * 0.32 - sizeA / 2;
+    const xB = W * 0.68 - sizeB / 2;
+
+    ctx.fillStyle = shadeForDensity(dA);
+    ctx.fillRect(xA, yA, sizeA, sizeA);
+    ctx.strokeStyle = '#1E4D8C';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(xA, yA, sizeA, sizeA);
+    ctx.fillStyle = '#142347';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('A', xA + sizeA / 2, yA + sizeA / 2 + 4);
+
+    ctx.fillStyle = shadeForDensity(dB);
+    ctx.fillRect(xB, yB, sizeB, sizeB);
+    ctx.strokeStyle = '#A8571E';
+    ctx.strokeRect(xB, yB, sizeB, sizeB);
+    ctx.fillStyle = '#142347';
+    ctx.fillText('B', xB + sizeB / 2, yB + sizeB / 2 + 4);
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  ['massA', 'volA', 'massB', 'volB'].forEach(id => {
+    els[id].addEventListener('input', update);
+  });
+
+  els.resetBtn.addEventListener('click', () => {
+    els.massA.value = DEFAULTS.massA;
+    els.volA.value = DEFAULTS.volA;
+    els.massB.value = DEFAULTS.massB;
+    els.volB.value = DEFAULTS.volB;
+    update();
+  });
+
+  window.addEventListener('resize', resizeCanvas);
+
+  resizeCanvas();
+  update();
+  if (animId) cancelAnimationFrame(animId);
+  animId = requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

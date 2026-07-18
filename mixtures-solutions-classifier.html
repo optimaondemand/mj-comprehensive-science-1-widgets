@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mixtures vs. Solutions Classifier</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fb;
+    color: #17223b;
+    padding: 18px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 10px; }
+  .head h1 { font-size: 21px; color: #142347; margin: 0 0 4px; }
+  .head p { font-size: 13px; color: #55617e; margin: 0; }
+  .scoreboard { text-align: center; font-size: 13px; color: #33405e; margin-bottom: 12px; }
+  .scoreboard strong { color: #142347; }
+  .feedback {
+    border-radius: 7px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; min-height: 18px;
+  }
+  .feedback.correct { background: #DFF3E9; color: #1A6B3D; border-left: 4px solid #2A9D5C; }
+  .feedback.incorrect { background: #FDECEC; color: #8A1F16; border-left: 4px solid #C0392B; }
+  .feedback.neutral { background: #eef2f8; color: #33405e; border-left: 4px solid #99a7c4; }
+  .hand {
+    background: #fff; border: 1px solid #dde3ee; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 60px;
+  }
+  .tile {
+    background: #142347; color: #fff; border-radius: 8px; padding: 10px 12px;
+    max-width: 150px; text-align: center; cursor: grab; user-select: none;
+    border: 2px solid transparent; font-size: 13px; font-weight: 600;
+  }
+  .tile:hover { transform: translateY(-2px); }
+  .tile.selected { border-color: #55C8E8; box-shadow: 0 0 0 2px rgba(85,200,232,.4); }
+  .bins { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .bin {
+    flex: 1; min-width: 260px; background: #fff; border: 2px dashed #c7d1e2;
+    border-radius: 10px; padding: 10px 12px; min-height: 140px;
+  }
+  .bin.dragover { border-color: #55C8E8; background: #eef8fc; }
+  .bin h3 { font-size: 14px; margin: 0 0 3px; }
+  .bin .sub { font-size: 11.5px; color: #6b7a99; margin-bottom: 8px; }
+  .bin .placed { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mixture-bin h3 { color: #A8571E; }
+  .solution-bin h3 { color: #1E4D8C; }
+  .mixture-bin .placed .tile { background: #A8571E; cursor: default; }
+  .solution-bin .placed .tile { background: #1E4D8C; cursor: default; }
+  .done-banner {
+    text-align: center; font-size: 14px; font-weight: 700; color: #1A6B3D;
+    background: #DFF3E9; border-radius: 8px; padding: 10px; margin-bottom: 12px; display: none;
+  }
+  .reset-row { text-align: center; }
+  button#resetBtn {
+    background: #142347; color: #fff; border: none; border-radius: 7px;
+    padding: 9px 26px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button#resetBtn:hover { background: #223564; }
+  button#resetBtn:focus-visible, .tile:focus-visible, .bin:focus-visible { outline: 3px solid #55C8E8; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap optima-widget">
+  <div class="head">
+    <h1>Mixtures vs. Solutions Classifier</h1>
+    <p>Sort each everyday example into the correct bin.</p>
+  </div>
+  <div class="scoreboard">Sorted correctly: <strong id="scoreVal">0</strong> / <span id="totalVal">7</span></div>
+  <div class="feedback neutral" id="feedback" role="status">Click an item, then click the bin where it belongs. (You can also drag it with a mouse.)</div>
+  <div class="done-banner" id="doneBanner">All 7 sorted correctly! A solution is still a mixture, just one where the parts have spread out evenly enough to disappear from view.</div>
+
+  <div class="hand" id="hand" aria-label="Unsorted examples"></div>
+
+  <div class="bins">
+    <div class="bin mixture-bin" id="bin-mixture" tabindex="0" role="button" aria-label="Mixture: you can see the parts">
+      <h3>Mixture</h3>
+      <div class="sub">You can still see or separate the individual parts.</div>
+      <div class="placed" id="placed-mixture"></div>
+    </div>
+    <div class="bin solution-bin" id="bin-solution" tabindex="0" role="button" aria-label="Solution: evenly dissolved">
+      <h3>Solution</h3>
+      <div class="sub">One substance is dissolved evenly into another; you cannot see it separately anymore.</div>
+      <div class="placed" id="placed-solution"></div>
+    </div>
+  </div>
+
+  <div class="reset-row">
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const ITEMS = [
+    { name: 'Trail Mix', cat: 'mixture', hint: 'You can pick out the nuts, raisins, and chips separately, so it is a mixture, not a solution.' },
+    { name: 'Salt Water', cat: 'solution', hint: 'The salt dissolves evenly into the water; you cannot see or scoop out the salt separately, so it is a solution.' },
+    { name: 'Oil and Vinegar', cat: 'mixture', hint: 'Oil and vinegar separate back into visible layers instead of dissolving evenly, so it is a mixture.' },
+    { name: 'Sugar Water', cat: 'solution', hint: 'The sugar dissolves evenly and disappears from view, so it is a solution.' },
+    { name: 'Sand and Gravel', cat: 'mixture', hint: 'You can see and separate the individual grains and pebbles, so it is a mixture.' },
+    { name: 'Muddy Water', cat: 'mixture', hint: 'The dirt stays visible and settles out over time instead of dissolving evenly, so it is a mixture.' },
+    { name: 'Lemonade', cat: 'solution', hint: 'The sugar and lemon juice dissolve evenly throughout the water, so it is a solution.' },
+  ];
+
+  const hand = document.getElementById('hand');
+  const feedback = document.getElementById('feedback');
+  const scoreVal = document.getElementById('scoreVal');
+  const totalVal = document.getElementById('totalVal');
+  const doneBanner = document.getElementById('doneBanner');
+  const resetBtn = document.getElementById('resetBtn');
+  const bins = { mixture: document.getElementById('bin-mixture'), solution: document.getElementById('bin-solution') };
+  const placedLists = { mixture: document.getElementById('placed-mixture'), solution: document.getElementById('placed-solution') };
+
+  let selectedName = null;
+  let solvedCount = 0;
+
+  function shuffledOrder() {
+    const arr = ITEMS.map((e, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function makeTile(item) {
+    const div = document.createElement('div');
+    div.className = 'tile';
+    div.tabIndex = 0;
+    div.draggable = true;
+    div.dataset.name = item.name;
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-label', item.name);
+    div.textContent = item.name;
+
+    div.addEventListener('click', () => selectTile(item.name, div));
+    div.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectTile(item.name, div); }
+    });
+    div.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', item.name);
+      selectTile(item.name, div);
+    });
+    return div;
+  }
+
+  function selectTile(name, div) {
+    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
+    if (selectedName === name) { selectedName = null; return; }
+    selectedName = name;
+    div.classList.add('selected');
+    feedback.className = 'feedback neutral';
+    feedback.textContent = 'Selected "' + name + '". Now click (or drag onto) the bin where it belongs.';
+  }
+
+  function attemptPlace(name, catAttempt) {
+    const item = ITEMS.find(e => e.name === name);
+    if (!item || item.placed) return;
+    if (item.cat === catAttempt) {
+      item.placed = true;
+      solvedCount++;
+      scoreVal.textContent = solvedCount;
+      feedback.className = 'feedback correct';
+      feedback.textContent = item.name + ' correctly belongs in ' + (catAttempt === 'mixture' ? 'Mixture' : 'Solution') + '. ' + item.hint;
+      const handTile = hand.querySelector('[data-name="' + CSS.escape(name) + '"]');
+      if (handTile) handTile.remove();
+      const placedTile = document.createElement('div');
+      placedTile.className = 'tile';
+      placedTile.textContent = item.name;
+      placedLists[catAttempt].appendChild(placedTile);
+      if (solvedCount === ITEMS.length) {
+        doneBanner.style.display = 'block';
+        feedback.textContent = 'All 7 sorted correctly!';
+      }
+    } else {
+      feedback.className = 'feedback incorrect';
+      feedback.textContent = item.name + ' does not belong in ' + (catAttempt === 'mixture' ? 'Mixture' : 'Solution') + '. ' + item.hint;
+    }
+    selectedName = null;
+    document.querySelectorAll('.tile.selected').forEach(t => t.classList.remove('selected'));
+  }
+
+  Object.entries(bins).forEach(([cat, binEl]) => {
+    binEl.addEventListener('click', () => { if (selectedName) attemptPlace(selectedName, cat); });
+    binEl.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && selectedName) { e.preventDefault(); attemptPlace(selectedName, cat); }
+    });
+    binEl.addEventListener('dragover', (e) => { e.preventDefault(); binEl.classList.add('dragover'); });
+    binEl.addEventListener('dragleave', () => binEl.classList.remove('dragover'));
+    binEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      binEl.classList.remove('dragover');
+      const name = e.dataTransfer.getData('text/plain');
+      if (name) attemptPlace(name, cat);
+    });
+  });
+
+  function build() {
+    hand.innerHTML = '';
+    Object.values(placedLists).forEach(p => p.innerHTML = '');
+    ITEMS.forEach(e => { e.placed = false; });
+    solvedCount = 0;
+    scoreVal.textContent = 0;
+    totalVal.textContent = ITEMS.length;
+    doneBanner.style.display = 'none';
+    feedback.className = 'feedback neutral';
+    feedback.textContent = 'Click an item, then click the bin where it belongs. (You can also drag it with a mouse.)';
+    shuffledOrder().forEach(i => hand.appendChild(makeTile(ITEMS[i])));
+  }
+
+  resetBtn.addEventListener('click', build);
+  build();
+})();
+</script>
+</body>
+</html>

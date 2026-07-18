@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photosynthesis and Respiration: Input-Output Matcher</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fb;
+    color: #17223b;
+    padding: 18px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .head { text-align: center; margin-bottom: 10px; }
+  .head h1 { font-size: 20px; color: #142347; margin: 0 0 4px; }
+  .head p { font-size: 13px; color: #55617e; margin: 0; }
+  .scoreboard { text-align: center; font-size: 13px; color: #33405e; margin-bottom: 10px; }
+  .scoreboard strong { color: #142347; }
+  .feedback {
+    border-radius: 7px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; min-height: 18px;
+  }
+  .feedback.correct { background: #DFF3E9; color: #1A6B3D; border-left: 4px solid #2A9D5C; }
+  .feedback.incorrect { background: #FDECEC; color: #8A1F16; border-left: 4px solid #C0392B; }
+  .feedback.neutral { background: #eef2f8; color: #33405e; border-left: 4px solid #99a7c4; }
+  .diagrams { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .diagram {
+    flex: 1; min-width: 320px; border-radius: 12px; padding: 12px 14px; border: 1px solid #dde3ee; background: #fff;
+  }
+  .diagram.photo { border-top: 4px solid #1B9C85; }
+  .diagram.resp { border-top: 4px solid #A8571E; }
+  .diagram h2 { font-size: 14px; margin: 0 0 2px; }
+  .diagram.photo h2 { color: #1B9C85; }
+  .diagram.resp h2 { color: #A8571E; }
+  .diagram .where { font-size: 11px; color: #8892a8; margin-bottom: 10px; }
+  .zone-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .zone-row .arrow { font-size: 18px; color: #99a7c4; }
+  .zone-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: #6b7a99; width: 46px; flex-shrink: 0; }
+  .zone {
+    flex: 1; display: flex; gap: 6px; flex-wrap: wrap; border: 2px dashed #c7d1e2; border-radius: 8px; padding: 6px; min-height: 46px;
+  }
+  .zone.dragover { border-color: #55C8E8; background: #eef8fc; }
+  .slot-box {
+    width: 60px; height: 38px; border-radius: 6px; background: #eef1f7; border: 1px dashed #c7d1e2;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: #9aa4bb; text-align: center;
+  }
+  .slot-box.filled {
+    background: #142347; color: #fff; font-size: 10.5px; font-weight: 700; border: none; padding: 2px;
+  }
+  .tray {
+    background: #fff; border: 1px solid #dde3ee; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+    display: flex; flex-wrap: wrap; gap: 8px; min-height: 56px;
+  }
+  .token {
+    background: #142347; color: #fff; border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-weight: 600;
+    cursor: grab; user-select: none; border: 2px solid transparent;
+  }
+  .token:hover { transform: translateY(-2px); }
+  .token.selected { border-color: #55C8E8; box-shadow: 0 0 0 2px rgba(85,200,232,.4); }
+  .token.co2 { background: #55617e; }
+  .token.water { background: #1E4D8C; }
+  .token.glucose { background: #A8571E; }
+  .token.oxygen { background: #1B9C85; }
+  .token.light { background: #C7922C; }
+  .token.energy { background: #C0392B; }
+  .done-banner {
+    text-align: center; font-size: 14px; font-weight: 700; color: #1A6B3D;
+    background: #DFF3E9; border-radius: 8px; padding: 10px; margin-bottom: 12px; display: none;
+  }
+  .reset-row { text-align: center; }
+  button#resetBtn {
+    background: #142347; color: #fff; border: none; border-radius: 7px;
+    padding: 9px 26px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button#resetBtn:hover { background: #223564; }
+  button#resetBtn:focus-visible, .token:focus-visible, .zone:focus-visible { outline: 3px solid #55C8E8; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap optima-widget">
+  <div class="head">
+    <h1>Photosynthesis and Respiration: Input-Output Matcher</h1>
+    <p>The same molecules flow through both processes, in opposite directions. Place each token where it belongs.</p>
+  </div>
+  <div class="scoreboard">Placed correctly: <strong id="scoreVal">0</strong> / <span id="totalVal">10</span></div>
+  <div class="feedback neutral" id="feedback" role="status">Click a token, then click the Inputs or Outputs row where it belongs. (You can also drag it with a mouse.)</div>
+  <div class="done-banner" id="doneBanner">All 10 placed! Notice: carbon dioxide, water, glucose, and oxygen each showed up twice, once as an input somewhere and once as an output somewhere else. Only light energy and released energy stayed on one side.</div>
+
+  <div class="diagrams">
+    <div class="diagram photo">
+      <h2>Photosynthesis</h2>
+      <div class="where">Happens in the chloroplast</div>
+      <div class="zone-row">
+        <span class="zone-label">Inputs</span>
+        <div class="zone" id="zone-photo-input" tabindex="0" role="button" aria-label="Photosynthesis inputs"></div>
+      </div>
+      <div class="zone-row">
+        <span class="arrow">&#8595;</span>
+      </div>
+      <div class="zone-row">
+        <span class="zone-label">Outputs</span>
+        <div class="zone" id="zone-photo-output" tabindex="0" role="button" aria-label="Photosynthesis outputs"></div>
+      </div>
+    </div>
+    <div class="diagram resp">
+      <h2>Cellular Respiration</h2>
+      <div class="where">Happens in the mitochondria</div>
+      <div class="zone-row">
+        <span class="zone-label">Inputs</span>
+        <div class="zone" id="zone-resp-input" tabindex="0" role="button" aria-label="Respiration inputs"></div>
+      </div>
+      <div class="zone-row">
+        <span class="arrow">&#8595;</span>
+      </div>
+      <div class="zone-row">
+        <span class="zone-label">Outputs</span>
+        <div class="zone" id="zone-resp-output" tabindex="0" role="button" aria-label="Respiration outputs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tray" id="tray" aria-label="Unplaced tokens"></div>
+
+  <div class="reset-row">
+    <button id="resetBtn" type="button">Reset</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const ZONES = {
+    'photo-input':  { need: { 'Carbon Dioxide': 1, 'Water': 1, 'Light Energy': 1 }, diagramName: 'Photosynthesis', roleName: 'an input' },
+    'photo-output': { need: { 'Glucose': 1, 'Oxygen': 1 }, diagramName: 'Photosynthesis', roleName: 'an output' },
+    'resp-input':   { need: { 'Glucose': 1, 'Oxygen': 1 }, diagramName: 'Cellular Respiration', roleName: 'an input' },
+    'resp-output':  { need: { 'Carbon Dioxide': 1, 'Water': 1, 'Released Energy': 1 }, diagramName: 'Cellular Respiration', roleName: 'an output' },
+  };
+
+  const MOLECULE_CLASS = {
+    'Carbon Dioxide': 'co2', 'Water': 'water', 'Glucose': 'glucose',
+    'Oxygen': 'oxygen', 'Light Energy': 'light', 'Released Energy': 'energy',
+  };
+
+  // Where each molecule actually belongs, for feedback when a placement is wrong.
+  const WHERE_IT_BELONGS = {
+    'Carbon Dioxide': 'an input to Photosynthesis and an output of Cellular Respiration',
+    'Water': 'an input to Photosynthesis and an output of Cellular Respiration',
+    'Glucose': 'an output of Photosynthesis and an input to Cellular Respiration',
+    'Oxygen': 'an output of Photosynthesis and an input to Cellular Respiration',
+    'Light Energy': 'an input to Photosynthesis only, never Cellular Respiration',
+    'Released Energy': 'an output of Cellular Respiration only, never Photosynthesis',
+  };
+
+  function buildTokenPool() {
+    const doubles = ['Carbon Dioxide', 'Water', 'Glucose', 'Oxygen'];
+    const singles = ['Light Energy', 'Released Energy'];
+    const pool = [];
+    doubles.forEach(m => { pool.push(m); pool.push(m); });
+    singles.forEach(m => pool.push(m));
+    return pool.map((m, i) => ({ id: m.replace(/\s/g, '') + '-' + i, molecule: m }));
+  }
+
+  let tokens = [];
+  let zoneState = {};
+  let solved = 0;
+  let selectedId = null;
+
+  const tray = document.getElementById('tray');
+  const feedback = document.getElementById('feedback');
+  const scoreVal = document.getElementById('scoreVal');
+  const totalVal = document.getElementById('totalVal');
+  const doneBanner = document.getElementById('doneBanner');
+  const resetBtn = document.getElementById('resetBtn');
+  const zoneEls = {
+    'photo-input': document.getElementById('zone-photo-input'),
+    'photo-output': document.getElementById('zone-photo-output'),
+    'resp-input': document.getElementById('zone-resp-input'),
+    'resp-output': document.getElementById('zone-resp-output'),
+  };
+
+  function totalSlots() {
+    return Object.values(ZONES).reduce((sum, z) => sum + Object.values(z.need).reduce((a, b) => a + b, 0), 0);
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function makeToken(t) {
+    const div = document.createElement('div');
+    div.className = 'token ' + MOLECULE_CLASS[t.molecule];
+    div.tabIndex = 0;
+    div.draggable = true;
+    div.dataset.id = t.id;
+    div.setAttribute('role', 'button');
+    div.setAttribute('aria-label', t.molecule);
+    div.textContent = t.molecule;
+    div.addEventListener('click', () => selectToken(t.id, div));
+    div.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectToken(t.id, div); }
+    });
+    div.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', t.id);
+      selectToken(t.id, div);
+    });
+    return div;
+  }
+
+  function selectToken(id, div) {
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+    if (selectedId === id) { selectedId = null; return; }
+    selectedId = id;
+    div.classList.add('selected');
+    feedback.className = 'feedback neutral';
+    const t = tokens.find(x => x.id === id);
+    feedback.textContent = 'Selected "' + t.molecule + '". Now click (or drag onto) the Inputs or Outputs row where it belongs.';
+  }
+
+  function addSlotBox(zoneKey, label, filled) {
+    const box = document.createElement('div');
+    box.className = 'slot-box' + (filled ? ' filled' : '');
+    box.textContent = label;
+    zoneEls[zoneKey].appendChild(box);
+    return box;
+  }
+
+  function renderEmptyZones() {
+    Object.entries(ZONES).forEach(([key, z]) => {
+      zoneEls[key].innerHTML = '';
+      Object.entries(z.need).forEach(([mol, count]) => {
+        for (let i = 0; i < count; i++) addSlotBox(key, '?');
+      });
+    });
+  }
+
+  function attemptPlace(tokenId, zoneKey) {
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token || token.placed) return;
+    const zone = ZONES[zoneKey];
+    const remaining = zoneState[zoneKey];
+    if (remaining[token.molecule] && remaining[token.molecule] > 0) {
+      remaining[token.molecule]--;
+      token.placed = true;
+      solved++;
+      scoreVal.textContent = solved;
+      feedback.className = 'feedback correct';
+      feedback.textContent = token.molecule + ' correctly placed as ' + zone.roleName + ' of ' + zone.diagramName + '.';
+
+      const trayTile = tray.querySelector('[data-id="' + token.id + '"]');
+      if (trayTile) trayTile.remove();
+
+      const emptyBox = Array.from(zoneEls[zoneKey].children).find(b => !b.classList.contains('filled'));
+      if (emptyBox) {
+        emptyBox.classList.add('filled');
+        emptyBox.textContent = token.molecule;
+      }
+
+      if (solved === totalSlots()) {
+        doneBanner.style.display = 'block';
+      }
+    } else {
+      feedback.className = 'feedback incorrect';
+      feedback.textContent = token.molecule + ' does not belong there. It is ' + WHERE_IT_BELONGS[token.molecule] + '.';
+    }
+    selectedId = null;
+    document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+  }
+
+  Object.entries(zoneEls).forEach(([key, el]) => {
+    el.addEventListener('click', () => { if (selectedId) attemptPlace(selectedId, key); });
+    el.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && selectedId) { e.preventDefault(); attemptPlace(selectedId, key); }
+    });
+    el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('dragover'); });
+    el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.classList.remove('dragover');
+      const id = e.dataTransfer.getData('text/plain');
+      if (id) attemptPlace(id, key);
+    });
+  });
+
+  function build() {
+    tokens = buildTokenPool();
+    zoneState = {};
+    Object.entries(ZONES).forEach(([key, z]) => { zoneState[key] = Object.assign({}, z.need); });
+    solved = 0;
+    selectedId = null;
+    scoreVal.textContent = 0;
+    totalVal.textContent = totalSlots();
+    doneBanner.style.display = 'none';
+    feedback.className = 'feedback neutral';
+    feedback.textContent = 'Click a token, then click the Inputs or Outputs row where it belongs. (You can also drag it with a mouse.)';
+    renderEmptyZones();
+    tray.innerHTML = '';
+    shuffle(tokens.slice()).forEach(t => tray.appendChild(makeToken(t)));
+  }
+
+  resetBtn.addEventListener('click', build);
+  build();
+})();
+</script>
+</body>
+</html>
