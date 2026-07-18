@@ -164,7 +164,7 @@
       scoreVal.textContent = solvedCount;
       feedback.className = 'feedback correct';
       feedback.textContent = item.name + ' correctly belongs in ' + (catAttempt === 'mixture' ? 'Mixture' : 'Solution') + '. ' + item.hint;
-      const handTile = hand.querySelector('[data-name="' + CSS.escape(name) + '"]');
+      const handTile = Array.from(hand.children).find(el => el.dataset.name === name);
       if (handTile) handTile.remove();
       const placedTile = document.createElement('div');
       placedTile.className = 'tile';
